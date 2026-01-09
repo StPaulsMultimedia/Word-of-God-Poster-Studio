@@ -1,0 +1,17 @@
+{
+  "name": "Word of God Poster Studio",
+  "short_name": "Word of God",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "description": "Daily Scripture posters by St Pauls Multimedia.",
+  "icons": [
+    {
+      "src": "https://cdn-1.webcatalog.io/catalog/bible-memory/bible-memory-icon-filled-256.png?v=1765772319277",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
