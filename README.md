@@ -21,5 +21,5 @@ An elegant, browser-based application designed to create high-quality daily bles
 ---
 
 ## 🏛️ Credits
-**Made by St Pauls Multimedia** Bandra, Maharashtra, India
+**Made by St Pauls Multimedia** Bandra, Maharashtra, India   
 *Creating digital tools for inspiration and faith.*
