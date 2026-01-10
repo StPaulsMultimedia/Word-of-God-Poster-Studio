@@ -30,15 +30,16 @@
             position: absolute; top: 2px; right: 2px; background: rgba(255,0,0,0.8); color: white; 
             border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; 
             cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
+            font-weight: bold; line-height: 1;
         }
 
         .btn-add-preset { background: #444; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 10px; cursor: pointer; width: 100%; margin-bottom: 5px; }
         .download-btn { width: 100%; padding: 15px; margin-top: 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #d4af37; color: #000; font-size: 16px; }
-        .reset-btn { width: 100%; padding: 10px; margin-top: 20px; border: 1px solid #444; border-radius: 6px; background: transparent; color: #666; font-size: 11px; cursor: pointer; text-transform: uppercase; }
+        .reset-btn { width: 100%; padding: 10px; margin-top: 20px; border: 1px solid #444; border-radius: 6px; background: transparent; color: #666; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
 
         .about-section { margin-top: 40px; padding-top: 20px; border-top: 1px solid #333; text-align: center; }
         .about-text { font-size: 11px; color: #777; line-height: 1.2; margin: 0; }
-        .about-text strong { color: #ffffff; text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; display: inline-block; margin: 2px 0; }
+        .about-text strong { color: #ffffff; font-family: 'Segoe UI', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; display: inline-block; margin: 2px 0; }
 
         /* Poster Canvas */
         #poster-canvas { width: 360px; height: 640px; position: relative; overflow: hidden; background: #000; flex-shrink: 0; }
@@ -46,7 +47,8 @@
         .overlay { position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.8)); z-index: 2; }
         .poster-content { position: relative; z-index: 3; height: 100%; width: 100%; display: flex; flex-direction: column; padding: 25px 30px 20px 30px; box-sizing: border-box; text-align: center; justify-content: space-between; }
         
-        .date-stamp { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: #fff; text-transform: uppercase; background: rgba(0, 0, 0, 0.35); padding: 5px 15px; border-radius: 20px; backdrop-filter: blur(4px); display: inline-block; margin-bottom: 10px; }
+        .date-container { display: flex; justify-content: center; margin-bottom: 8px; }
+        .date-stamp { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: #fff; text-transform: uppercase; background: rgba(0, 0, 0, 0.35); padding: 5px 15px; border-radius: 20px; backdrop-filter: blur(4px); border: 0.5px solid rgba(255, 255, 255, 0.1); }
         .main-title { font-family: 'Cinzel', serif; font-size: 34px; margin: 0; color: #fff; text-transform: uppercase; line-height: 0.9; }
         .sub-title { font-family: 'Playfair Display', serif; font-size: 22px; font-style: italic; margin-top: -4px; color: #ffffff; }
         
@@ -63,7 +65,7 @@
 
         @media (max-width: 700px) {
             body { flex-direction: column; align-items: center; padding: 10px; }
-            .sidebar { width: 95%; height: auto; order: 2; }
+            .sidebar { width: 95%; height: auto; order: 2; margin-bottom: 20px; }
             #poster-canvas { width: 100vw; height: 177.7vw; max-width: 360px; max-height: 640px; order: 1; }
         }
     </style>
@@ -101,11 +103,13 @@
 </div>
 
 <div id="poster-canvas">
-    <img id="bg-image" src="">
+    <img id="bg-image" src="" style="display:none;">
     <div class="overlay"></div>
     <div class="poster-content">
         <div class="header">
-            <div class="date-stamp" id="outDate"></div>
+            <div class="date-container" id="dateCont">
+                <div class="date-stamp" id="outDate"></div>
+            </div>
             <h1 class="main-title">God's Word</h1>
             <p class="sub-title">My daily blessing</p>
         </div>
@@ -127,7 +131,7 @@
 
 <script>
     let db;
-    const request = indexedDB.open("PosterStudioDB", 6);
+    const request = indexedDB.open("PosterStudioDB", 7);
     request.onsuccess = e => { db = e.target.result; loadSavedData(); setCurrentDate(); };
     request.onupgradeneeded = e => { db = e.target.result; if (!db.objectStoreNames.contains("assets")) db.createObjectStore("assets"); };
 
@@ -140,11 +144,8 @@
     }
 
     function loadSavedData() {
-        // Restore Background
-        getFromDB("lastBg", val => { if(val) { document.getElementById('bg-image').src = val; } });
-        // Restore Profile
+        getFromDB("lastBg", val => { if(val) { const el = document.getElementById('bg-image'); el.src = val; el.style.display = 'block'; } });
         getFromDB("sigImg", val => { if(val) { const el = document.getElementById('sig-out-img'); el.src = val; el.style.display = 'block'; } });
-        // Restore Name
         getFromDB("lastName", val => { if(val) { document.getElementById('sigNameInput').value = val; document.getElementById('sig-out-name').innerText = val; } });
         renderPresets(); renderProfilePresets();
     }
@@ -156,24 +157,19 @@
         let refIndex = -1;
         let prayerIndex = -1;
 
-        // Find key indices
         lines.forEach((line, i) => {
             if (refPattern.test(line)) refIndex = i;
             if (line.toLowerCase().includes("prayer")) prayerIndex = i;
         });
 
-        // Set Verse & Reference
         if (refIndex !== -1) {
             document.getElementById('outVerse').innerText = lines.slice(0, refIndex).join(" ");
             document.getElementById('outRef').innerText = lines[refIndex].toUpperCase();
         }
 
-        // Set Prayer Title and Body
         if (prayerIndex !== -1) {
             document.getElementById('outPrayerTitle').innerText = lines[prayerIndex];
             document.getElementById('outPrayerBody').innerText = lines.slice(prayerIndex + 1).join(" ");
-            
-            // Short Message is everything between Reference and Prayer
             if (refIndex !== -1 && prayerIndex > refIndex + 1) {
                 document.getElementById('outMsg').innerText = lines.slice(refIndex + 1, prayerIndex).join(" ");
             } else {
@@ -204,7 +200,7 @@
             const g = document.getElementById('presetGallery'); g.innerHTML = ''; 
             p.forEach((d, i) => { 
                 const w = document.createElement('div'); w.className = 'thumb-wrapper'; 
-                w.onclick = () => { document.getElementById('bg-image').src = d; saveToDB("lastBg", d); };
+                w.onclick = () => { document.getElementById('bg-image').src = d; saveToDB("lastBg", d); document.getElementById('bg-image').style.display='block'; };
                 const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = 'X'; 
                 del.onclick = (e) => { e.stopPropagation(); p.splice(i, 1); saveToDB("bgPresets", p); renderPresets(); };
                 const img = document.createElement('img'); img.src = d; img.className='thumb-img'; 
@@ -224,7 +220,7 @@
             const g = document.getElementById('profileGallery'); g.innerHTML = ''; 
             p.forEach((d, i) => { 
                 const w = document.createElement('div'); w.className = 'profile-thumb-wrapper'; 
-                w.onclick = () => { document.getElementById('sig-out-img').src = d; saveToDB("sigImg", d); };
+                w.onclick = () => { document.getElementById('sig-out-img').src = d; saveToDB("sigImg", d); document.getElementById('sig-out-img').style.display='block'; };
                 const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = 'X'; 
                 del.onclick = (e) => { e.stopPropagation(); p.splice(i, 1); saveToDB("profP", p); renderProfilePresets(); };
                 const img = document.createElement('img'); img.src = d; img.className='thumb-img'; 
@@ -236,7 +232,8 @@
     document.getElementById('bgInput').onchange = e => { 
         const r = new FileReader(); 
         r.onload = ev => { 
-            document.getElementById('bg-image').src = ev.target.result; 
+            const img = document.getElementById('bg-image');
+            img.src = ev.target.result; img.style.display = 'block';
             saveToDB("lastBg", ev.target.result); 
         }; 
         r.readAsDataURL(e.target.files[0]); 
