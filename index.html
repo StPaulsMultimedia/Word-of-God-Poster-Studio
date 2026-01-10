@@ -19,10 +19,19 @@
         h2 { font-family: 'Cinzel', serif; font-size: 14px; color: #d4af37; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 0; }
         label { display: block; margin-top: 15px; font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         textarea, input, select { width: 100%; background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; margin-top: 5px; border-radius: 6px; box-sizing: border-box; }
+        
+        /* New Clear Button Style */
+        .clear-text-btn { 
+            background: transparent; color: #ff5555; border: 1px solid #443333; 
+            padding: 5px; margin-top: 8px; border-radius: 4px; font-size: 9px; 
+            cursor: pointer; width: 100%; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        .clear-text-btn:hover { background: #332222; border-color: #ff5555; }
+
         .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: #ddd; }
         .toggle-row input { width: auto; margin: 0; }
         
-        /* Preset Styling */
         .preset-container { margin-top: 10px; background: #252525; padding: 10px; border-radius: 8px; border: 1px dashed #444; }
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
         .thumb-wrapper, .profile-thumb-wrapper { 
@@ -32,7 +41,6 @@
         .profile-thumb-wrapper { aspect-ratio: 1/1; border-radius: 8px; }
         .thumb-img { width: 100%; height: 100%; object-fit: cover; }
         
-        /* GOLD ACTIVE BORDER */
         .active-preset { border-color: #d4af37 !important; box-shadow: 0 0 8px rgba(212, 175, 55, 0.6); transform: scale(0.95); }
 
         .del-btn { 
@@ -50,7 +58,6 @@
         .about-text { font-size: 11px; color: #777; line-height: 1.2; margin: 0; }
         .about-text strong { color: #ffffff; font-family: 'Segoe UI', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; display: inline-block; margin: 2px 0; }
 
-        /* Poster Canvas */
         #poster-canvas { width: 360px; height: 640px; position: relative; overflow: hidden; background: #000; flex-shrink: 0; }
         #bg-image { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         .overlay { position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.8)); z-index: 2; }
@@ -85,6 +92,7 @@
     <h2>POSTER CONTROLS</h2>
     <label>Paste Full Message</label>
     <textarea id="textInput" placeholder="Paste full text here..."></textarea>
+    <button class="clear-text-btn" onclick="clearMessage()">Clear Message</button>
     
     <div class="toggle-row">
         <input type="checkbox" id="showDateToggle" checked onchange="toggleDate()">
@@ -159,6 +167,20 @@
         document.getElementById('outDate').innerText = new Date().toLocaleDateString('en-US', options).toUpperCase();
     }
 
+    // --- NEW CLEAR MESSAGE FUNCTION ---
+    function clearMessage() {
+        document.getElementById('textInput').value = '';
+        document.getElementById('outVerse').innerText = 'VERSE TEXT';
+        document.getElementById('outRef').innerText = 'REFERENCE';
+        document.getElementById('outMsg').innerText = 'SHORT MESSAGE';
+        document.getElementById('outPrayerTitle').innerText = 'Short Prayer';
+        document.getElementById('outPrayerBody').innerText = '...';
+        
+        // Reset font sizes
+        document.getElementById('outPrayerBody').style.fontSize = '13px';
+        document.getElementById('outVerse').style.fontSize = '19px';
+    }
+
     function toggleDate() { document.getElementById('dateCont').style.display = document.getElementById('showDateToggle').checked ? 'flex' : 'none'; }
     function resetAllData() { if (confirm("Reset all presets?")) { const tx = db.transaction("assets", "readwrite"); tx.objectStore("assets").clear(); tx.oncomplete = () => location.reload(); } }
 
@@ -195,7 +217,6 @@
         }
     }
 
-    // UPDATED GALLERIES WITH ACTIVE STATE LOGIC
     function saveCurrentBg() { 
         const src = document.getElementById('bg-image').src; 
         saveToDB("activeBg", src);
@@ -210,12 +231,11 @@
             const g = document.getElementById('presetGallery'); g.innerHTML = ''; 
             p.forEach((d, i) => { 
                 const w = document.createElement('div'); 
-                // Add active class if it matches the poster's image
                 w.className = 'thumb-wrapper' + (activeSrc === d ? ' active-preset' : ''); 
                 w.onclick = () => { 
                     const bg = document.getElementById('bg-image'); bg.src = d; bg.style.display = 'block'; 
                     saveToDB("activeBg", d); 
-                    renderPresets(); // Refresh borders
+                    renderPresets();
                 }; 
                 const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = 'X'; del.onclick = (e) => deleteBgPreset(i, e); 
                 const img = document.createElement('img'); img.src = d; img.className='thumb-img'; 
@@ -242,7 +262,7 @@
                 w.onclick = () => { 
                     const sigImg = document.getElementById('sig-out-img'); sigImg.src = d; sigImg.style.display = 'block'; 
                     saveToDB("sigImg", d); 
-                    renderProfilePresets(); // Refresh borders
+                    renderProfilePresets();
                 }; 
                 const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = 'X'; del.onclick = (e) => deleteProfilePreset(i, e); 
                 const img = document.createElement('img'); img.src = d; img.className='thumb-img'; 
@@ -252,26 +272,8 @@
     }
 
     document.getElementById('sigNameInput').oninput = e => { document.getElementById('sig-out-name').innerText = e.target.value; saveToDB("lastName", e.target.value); };
-    
-    document.getElementById('bgInput').onchange = e => { 
-        const r = new FileReader(); 
-        r.onload = ev => { 
-            const bg = document.getElementById('bg-image'); bg.src = ev.target.result; bg.style.display = 'block'; 
-            saveToDB("activeBg", ev.target.result);
-            renderPresets(); // Check if this new upload matches a preset
-        }; 
-        r.readAsDataURL(e.target.files[0]); 
-    };
-    
-    document.getElementById('sigImgInput').onchange = e => { 
-        const r = new FileReader(); 
-        r.onload = ev => { 
-            const sigImg = document.getElementById('sig-out-img'); sigImg.src = ev.target.result; sigImg.style.display = 'block'; 
-            saveToDB("sigImg", ev.target.result); 
-            renderProfilePresets();
-        }; 
-        r.readAsDataURL(e.target.files[0]); 
-    };
+    document.getElementById('bgInput').onchange = e => { const r = new FileReader(); r.onload = ev => { const bg = document.getElementById('bg-image'); bg.src = ev.target.result; bg.style.display = 'block'; saveToDB("activeBg", ev.target.result); renderPresets(); }; r.readAsDataURL(e.target.files[0]); };
+    document.getElementById('sigImgInput').onchange = e => { const r = new FileReader(); r.onload = ev => { const sigImg = document.getElementById('sig-out-img'); sigImg.src = ev.target.result; sigImg.style.display = 'block'; saveToDB("sigImg", ev.target.result); renderProfilePresets(); }; r.readAsDataURL(e.target.files[0]); };
 
     function downloadPoster() { html2canvas(document.getElementById('poster-canvas'), { scale: 3 }).then(c => { const l = document.createElement('a'); l.download = 'GodsWord_Poster.png'; l.href = c.toDataURL(); l.click(); }); }
 </script>
