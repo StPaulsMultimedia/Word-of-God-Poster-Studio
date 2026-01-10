@@ -126,7 +126,7 @@
             <div class="verse-ref" id="outRef">REFERENCE</div>
             <div class="short-msg" id="outMsg">SHORT MESSAGE</div>
             <div class="prayer-container">
-                <span class="prayer-label" id="outPrayerTitle">Short Prayer</span>
+                <span class="prayer-label">Short Prayer</span>
                 <div class="prayer-text" id="outPrayerBody">...</div>
             </div>
         </div>
@@ -166,40 +166,14 @@
     document.getElementById('textInput').addEventListener('input', e => {
         const lines = e.target.value.split('\n').map(l => l.trim().replace(/^>\s*/, '')).filter(l => l !== "");
         const refPattern = /([1-3]\s)?[A-Z][a-z]+\s\d+:\d+(-?\d+)?/i;
-        
-        let refIndex = -1;
-        let prayerIndex = -1;
-
-        // Step 1: Locate Reference and Prayer Title positions
-        lines.forEach((line, i) => {
-            if (refPattern.test(line) && refIndex === -1) refIndex = i;
-            if (line.toLowerCase().includes("prayer") && prayerIndex === -1) prayerIndex = i;
-        });
-
-        // Step 2: Populate Verse (Everything before Reference)
-        if (refIndex !== -1) {
-            document.getElementById('outVerse').innerText = lines.slice(0, refIndex).join(" ");
-            document.getElementById('outRef').innerText = lines[refIndex].toUpperCase();
-        }
-
-        // Step 3: Populate Prayer Title and Prayer Body
-        if (prayerIndex !== -1) {
-            // Set detected title (e.g., "Short Prayer 🙏")
-            document.getElementById('outPrayerTitle').innerText = lines[prayerIndex];
-            // Set body (everything after the title)
-            document.getElementById('outPrayerBody').innerText = lines.slice(prayerIndex + 1).join(" ");
-
-            // Step 4: Populate Short Message (Everything between Reference and Prayer)
-            if (refIndex !== -1 && prayerIndex > refIndex + 1) {
-                document.getElementById('outMsg').innerText = lines.slice(refIndex + 1, prayerIndex).join(" ");
-            } else {
-                document.getElementById('outMsg').innerText = "";
-            }
-        } else {
-            // Fallback if no "Prayer" line is found
-            document.getElementById('outPrayerTitle').innerText = "Short Prayer";
-        }
-        
+        let foundRef = "REFERENCE", otherLines = [];
+        lines.forEach(l => { if(refPattern.test(l)) foundRef = l.toUpperCase(); else otherLines.push(l); });
+        if(otherLines[0]) document.getElementById('outVerse').innerText = otherLines[0];
+        document.getElementById('outRef').innerText = foundRef;
+        if(otherLines[1]) document.getElementById('outMsg').innerText = otherLines[1];
+        let prayerLines = [];
+        for (let i = 2; i < otherLines.length; i++) { prayerLines.push(otherLines[i]); }
+        document.getElementById('outPrayerBody').innerText = prayerLines.join(" ");
         adjustFontSize();
     });
 
