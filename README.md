@@ -1,4 +1,4 @@
-# 📖 God's Word Poster Studio
+# 📖 God's Word Studio
 
 An elegant, browser-based application designed to create high-quality daily blessing posters for WhatsApp, Telegram, and Social Media.
 
