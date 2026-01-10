@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gods-word-v2';
+const CACHE_NAME = 'gods-word-v3';
 const assets = [
   './',
   './index.html',
@@ -35,6 +35,7 @@ self.addEventListener('fetch', e => {
     })
   );
 });
+
 
 
 
