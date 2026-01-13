@@ -71,8 +71,22 @@
         .verse-text { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 6px; }
         .verse-ref { font-family: sans-serif; font-size: 10px; font-weight: 600; color: #ffffff; text-transform: uppercase; letter-spacing: 1.8px; margin-bottom: 18px; }
         .short-msg { font-family: sans-serif; font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 15px; }
-        .prayer-label { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15px; text-decoration: underline; color: #fff; display: block; margin-bottom: 5px; }
-        .prayer-text { font-family: 'Playfair Display', serif; font-size: 13px; color: #ffffff; line-height: 1.4; }
+
+        .reflection-label, .prayer-label { 
+            font-family: 'Playfair Display', serif; 
+            font-weight: 700; 
+            font-size: 15px; 
+            text-decoration: underline; 
+            color: #fff; 
+            display: block; 
+            margin-bottom: 5px; 
+        }
+        .reflection-text, .prayer-text { 
+            font-family: 'Playfair Display', serif; 
+            font-size: 13px; 
+            color: #ffffff; 
+            line-height: 1.4; 
+        }
 
         .footer-sig { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
         .profile-circle { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #fff; object-fit: cover; }
@@ -90,13 +104,18 @@
 <div class="sidebar">
     <h2>POSTER CONTROLS</h2>
     <label>Paste Full Message</label>
-    <textarea id="textInput" placeholder="Paste full text here..."></textarea>
+    <textarea id="textInput" placeholder="Paste full text here..." rows="8"></textarea>
     <button class="clear-text-btn" onclick="clearMessage()">Clear Message</button>
     
+    <label>Date Settings</label>
     <div class="toggle-row">
         <input type="checkbox" id="showDateToggle" checked onchange="toggleDate()">
         <span>Show Auto-Date</span>
     </div>
+    <select id="dateOffset" onchange="setCurrentDate()" style="margin-top: 8px;">
+        <option value="0">Today's Date</option>
+        <option value="1">Tomorrow's Date</option>
+    </select>
 
     <label>Background Images</label>
     <input type="file" id="bgInput" accept="image/*">
@@ -138,6 +157,12 @@
             <div class="verse-text" id="outVerse">VERSE TEXT</div>
             <div class="verse-ref" id="outRef">REFERENCE</div>
             <div class="short-msg" id="outMsg">All glory and praise to Jesus Christ our Lord and savior</div>
+            
+            <div id="reflectionCont" style="display:none; margin-bottom: 12px;">
+                <span class="reflection-label">Reflection</span>
+                <div class="reflection-text" id="outReflectionBody"></div>
+            </div>
+
             <div class="prayer-container">
                 <span class="prayer-label" id="outPrayerTitle">Short Prayer</span>
                 <div class="prayer-text" id="outPrayerBody">...</div>
@@ -162,11 +187,14 @@
     function getFromDB(key, callback) { const tx = db.transaction("assets", "readonly"); const req = tx.objectStore("assets").get(key); req.onsuccess = () => callback(req.result); }
 
     function setCurrentDate() {
+        const offset = parseInt(document.getElementById('dateOffset').value);
+        const date = new Date();
+        date.setDate(date.getDate() + offset); // Shifts date forward if offset is 1
+        
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('outDate').innerText = new Date().toLocaleDateString('en-US', options).toUpperCase();
+        document.getElementById('outDate').innerText = date.toLocaleDateString('en-US', options).toUpperCase();
     }
 
-    // --- UPDATED CLEAR MESSAGE FUNCTION ---
     function clearMessage() {
         const defaultMsg = "All glory and praise to Jesus Christ our Lord and savior";
         document.getElementById('textInput').value = '';
@@ -175,7 +203,8 @@
         document.getElementById('outMsg').innerText = defaultMsg;
         document.getElementById('outPrayerTitle').innerText = 'Short Prayer';
         document.getElementById('outPrayerBody').innerText = '...';
-        
+        document.getElementById('reflectionCont').style.display = 'none';
+        document.getElementById('outReflectionBody').innerText = '';
         document.getElementById('outPrayerBody').style.fontSize = '13px';
         document.getElementById('outVerse').style.fontSize = '19px';
     }
@@ -190,53 +219,51 @@
         renderPresets(); renderProfilePresets();
     }
 
-    // --- UPDATED SMART TEXT LOGIC ---
     document.getElementById('textInput').addEventListener('input', e => {
-        const lines = e.target.value.split('\n').map(l => l.trim().replace(/^>\s*/, '')).filter(l => l !== "");
+        const lines = e.target.value.split('\n').map(l => l.trim()).filter(l => l !== "");
         const refPattern = /([1-3]\s)?[A-Z][a-z]+\s\d+:\d+(-?\d+)?/i;
         const defaultShortMsg = "All glory and praise to Jesus Christ our Lord and savior";
         
-        let foundRef = "REFERENCE", otherLines = [];
-        lines.forEach(l => { 
-            if(refPattern.test(l)) foundRef = l.toUpperCase(); 
-            else otherLines.push(l); 
+        let foundRef = "";
+        let verseLines = [];
+        let reflectionLines = [];
+        let prayerLines = [];
+        let currentSection = "verse"; 
+
+        lines.forEach(line => {
+            let cleanLine = line.replace(/^>\s*/, '').trim(); 
+            if (line.toLowerCase().includes("reflection")) { currentSection = "reflection"; return; }
+            if (line.toLowerCase().includes("prayer")) { currentSection = "prayer"; return; }
+            
+            if (refPattern.test(cleanLine)) {
+                foundRef = cleanLine.replace(/📖\s*/, '').toUpperCase(); 
+            } else {
+                if (currentSection === "verse") verseLines.push(cleanLine);
+                else if (currentSection === "reflection") reflectionLines.push(cleanLine);
+                else if (currentSection === "prayer") prayerLines.push(cleanLine);
+            }
         });
 
-        // 1. Set Verse
-        if(otherLines[0]) document.getElementById('outVerse').innerText = otherLines[0];
-        document.getElementById('outRef').innerText = foundRef;
+        document.getElementById('outVerse').innerText = verseLines.join(" ") || "VERSE TEXT";
+        document.getElementById('outRef').innerText = foundRef || "REFERENCE";
 
-        // 2. Short Message Logic
-        let prayerTitleIndex = 2; // Default if message exists
-
-        if (otherLines[1]) {
-            // Check if user skipped short message and went straight to "Short Prayer"
-            if (otherLines[1].toLowerCase().includes("prayer")) {
-                document.getElementById('outMsg').innerText = defaultShortMsg;
-                prayerTitleIndex = 1; // Prayer title is actually the second line
-            } else {
-                document.getElementById('outMsg').innerText = otherLines[1];
-                prayerTitleIndex = 2;
-            }
+        const reflectionCont = document.getElementById('reflectionCont');
+        if (reflectionLines.length > 0) {
+            reflectionCont.style.display = 'block';
+            document.getElementById('outReflectionBody').innerText = reflectionLines.join(" ");
         } else {
-            // No second line at all
-            document.getElementById('outMsg').innerText = defaultShortMsg;
+            reflectionCont.style.display = 'none';
         }
 
-        // 3. Set Prayer Title
-        if(otherLines[prayerTitleIndex]) {
-            document.getElementById('outPrayerTitle').innerText = otherLines[prayerTitleIndex];
+        if (prayerLines.length > 0) {
+            document.getElementById('outPrayerTitle').innerText = "Short Prayer";
+            document.getElementById('outPrayerBody').innerText = prayerLines.join(" ");
         } else {
             document.getElementById('outPrayerTitle').innerText = "Short Prayer";
+            document.getElementById('outPrayerBody').innerText = "...";
         }
 
-        // 4. Set Prayer Body
-        let prayerLines = [];
-        for (let i = (prayerTitleIndex + 1); i < otherLines.length; i++) { 
-            prayerLines.push(otherLines[i]); 
-        }
-        document.getElementById('outPrayerBody').innerText = prayerLines.join(" ");
-        
+        document.getElementById('outMsg').innerText = defaultShortMsg;
         adjustFontSize();
     });
 
@@ -244,8 +271,9 @@
         let fSize = 13, vSize = 19;
         const scaler = document.getElementById('textScaler');
         while (scaler.scrollHeight > scaler.offsetHeight && fSize > 8) {
-            fSize -= 0.5; vSize -= 0.5;
+            fSize -= 0.3; vSize -= 0.3;
             document.getElementById('outPrayerBody').style.fontSize = fSize + 'px';
+            document.getElementById('outReflectionBody').style.fontSize = fSize + 'px';
             document.getElementById('outVerse').style.fontSize = vSize + 'px';
         }
     }
@@ -308,7 +336,14 @@
     document.getElementById('bgInput').onchange = e => { const r = new FileReader(); r.onload = ev => { const bg = document.getElementById('bg-image'); bg.src = ev.target.result; bg.style.display = 'block'; saveToDB("activeBg", ev.target.result); renderPresets(); }; r.readAsDataURL(e.target.files[0]); };
     document.getElementById('sigImgInput').onchange = e => { const r = new FileReader(); r.onload = ev => { const sigImg = document.getElementById('sig-out-img'); sigImg.src = ev.target.result; sigImg.style.display = 'block'; saveToDB("sigImg", ev.target.result); renderProfilePresets(); }; r.readAsDataURL(e.target.files[0]); };
 
-    function downloadPoster() { html2canvas(document.getElementById('poster-canvas'), { scale: 3 }).then(c => { const l = document.createElement('a'); l.download = 'GodsWord_Poster.png'; l.href = c.toDataURL(); l.click(); }); }
+    function downloadPoster() { 
+        html2canvas(document.getElementById('poster-canvas'), { scale: 3, useCORS: true }).then(c => { 
+            const l = document.createElement('a'); 
+            l.download = 'GodsWord_Poster.png'; 
+            l.href = c.toDataURL(); 
+            l.click(); 
+        }); 
+    }
 </script>
 </body>
 </html>
